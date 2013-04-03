@@ -4,13 +4,15 @@
  * MIT license
  */
 
+(function(StyleFix, PrefixFree){
+
 (function(){
 
 if(!window.addEventListener) {
 	return;
 }
 
-var self = window.StyleFix = {
+var self = StyleFix = {
 	link: function(link) {
 		try {
 			// Ignore stylesheets with data-noprefix attribute as well as alternate stylesheets
@@ -41,7 +43,10 @@ var self = window.StyleFix = {
 				var css = xhr.responseText;
 				
 				if(css && link.parentNode && (!xhr.status || xhr.status < 400 || xhr.status > 600)) {
-					css = self.fix(css, true, link);
+					var fixed = self.fix(css, true, link);
+					if (css == fixed)
+						return;
+					css = fixed;
 					
 					// Convert relative URLs to absolute, if needed
 					if(base) {
@@ -107,17 +112,19 @@ var self = window.StyleFix = {
 		}
 		var disabled = style.disabled;
 		
-		style.textContent = self.fix(style.textContent, true, style);
+		var css = style.textContent;
+		var fixed = self.fix(css, true, style);
+		if (css != fixed)
+			style.textContent = fixed;
 		
 		style.disabled = disabled;
 	},
 
 	styleAttribute: function(element) {
 		var css = element.getAttribute('style');
-		
-		css = self.fix(css, false, element);
-		
-		element.setAttribute('style', css);
+		var fixed = self.fix(css, false, element);
+		if (css != fixed)
+			element.setAttribute('style', fixed);
 	},
 	
 	process: function() {
@@ -157,11 +164,9 @@ var self = window.StyleFix = {
  * Process styles
  **************************************/
 (function(){
-	setTimeout(function(){
-		$('link[rel="stylesheet"]').forEach(StyleFix.link);
-	}, 10);
-	
-	document.addEventListener('DOMContentLoaded', StyleFix.process, false);
+	document.readyState == 'loading' ?
+		document.addEventListener('DOMContentLoaded', StyleFix.process, false) :
+		setTimeout(StyleFix.process, 0);
 })();
 
 function $(expr, con) {
@@ -175,7 +180,7 @@ function $(expr, con) {
  */
 (function(root){
 
-if(!window.StyleFix || !window.getComputedStyle) {
+if(!StyleFix || !window.getComputedStyle) {
 	return;
 }
 
@@ -192,7 +197,7 @@ function fix(what, before, after, replacement, css) {
 	return css;
 }
 
-var self = window.PrefixFree = {
+var self = PrefixFree = {
 	prefixCSS: function(css, raw, element) {
 		var prefix = self.prefix;
 		
@@ -483,10 +488,11 @@ self.valueProperties = [
 	'transition-property'
 ]
 
-// Add class for current prefix
-root.className += ' ' + self.prefix;
+navigator.prefix = self.prefix;
 
 StyleFix.register(self.prefixCSS);
 
 
 })(document.documentElement);
+
+})();

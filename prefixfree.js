@@ -7,6 +7,7 @@
 
 if (typeof addEventListener == 'function') ({
   initialize: function(exports) {
+    var that = this;
     var doc = document.implementation.createHTMLDocument('');
     var el = doc.documentElement.appendChild(doc.createElement('style'));
     var style = el.style;
@@ -35,17 +36,16 @@ if (typeof addEventListener == 'function') ({
         }
       }
     }
+    if (!this.properties.length)
+      return;
 
-    prefixes[''] = 0;
-    var prefix = Object.keys(prefixes).reduce(function(prev, curr) {
-      return prefixes[curr] > prefixes[prev] ? curr : prev;
-    }, '');
+    var prefix = Object.keys(prefixes).sort(function(a, b) {
+      return prefixes[a] - prefixes[b];
+    }).pop();
     exports['PrefixFree'] = {
       'JS': prefix,
       'CSS': this.prefix = prefix ? '-' + prefix.toLowerCase() + '-' : ''
     };
-    if (!prefix)
-      return;
 
     // Properties that accept properties as their value
     this.valueProperties = [
@@ -169,26 +169,45 @@ if (typeof addEventListener == 'function') ({
 
     // Profit!
 
+    this.process();
+
     function capitalize(str) {
       return str.replace(/^[a-z]/, function($0) { return $0.toUpperCase(); });
     }
 
-    var that = this;
+    if (typeof MutationObserver == 'function' ||
+        typeof WebkitMutationObserver == 'function') {
+      var target = document.documentElement;
+      var config = {
+        attributeFilter: ['style'],
+        attributes: true,
+        subtree: true
+      };
+      var observer = new (MutationObserver || WebkitMutationObserver)(function(mutations) {
+        observer.disconnect();
+        mutations.forEach(function(mutation) {
+          that.styleAttribute(mutation.target);
+        });
+        observer.observe(target, config);
+      });
+      observer.observe(target, config);
+    }
+
     this.properties.forEach(function(property) {
       Object.defineProperty(CSSStyleDeclaration.prototype, property, {
         get: function() {
           return this[prefix + capitalize(property)];
         },
         set: function(value) {
+          observer && observer.disconnect();
           this[prefix + capitalize(property)] =
             that.valueProperties.indexOf(property) < 0 ? value :
               that._fix('properties', '(^|,|\\s)', '(\\s|,|$)',
                         '$1' + that.prefix + '$2$3', value);
+          observer && observer.observe(target, config);
         }
       });
     });
-
-    this.process();
   },
 
   link: function(link) {
@@ -304,13 +323,10 @@ if (typeof addEventListener == 'function') ({
     css = this._fix('properties', '(^|\\{|\\s|;)', '\\s*:', '$1' + prefix + '$2:', css);
 
     // Prefix properties *inside* values (issue #8)
-    if (this.properties.length) {
-      var regex = RegExp('\\b(' + this.properties.join('|') + ')(?!:)', 'gi');
-
-      css = this._fix('valueProperties', '\\b', ':(.+?);', function($0) {
-        return $0.replace(regex, prefix + '$1');
-      }, css);
-    }
+    var regex = RegExp('\\b(' + this.properties.join('|') + ')(?!:)', 'gi');
+    css = this._fix('valueProperties', '\\b', ':(.+?);', function($0) {
+      return $0.replace(regex, prefix + '$1');
+    }, css);
 
     if (raw) {
       css = this._fix('selectors', '', '\\b', this._prefixSelector, css);
@@ -325,13 +341,10 @@ if (typeof addEventListener == 'function') ({
 
   _fix: function(what, before, after, replacement, css) {
     what = this[what];
-
-    if(what.length) {
+    if (what.length) {
       var regex = RegExp(before + '(' + what.join('|') + ')' + after, 'gi');
-
       css = css.replace(regex, replacement);
     }
-
     return css;
   },
 

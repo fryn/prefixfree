@@ -1,5 +1,5 @@
 /**
- * PrefixFree+ 1.0.7
+ * -prefix-free 1.0.7 (fryn remix) <https://github.com/fryn/prefixfree>
  * @author Lea Verou
  * @author Frank Yan
  * @license MIT license

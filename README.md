@@ -15,4 +15,4 @@ This fork exposes no global variables to keep things clean and simple, and it im
 
 Known limitations in which -prefix-free cannot prefix CSS:
 - setting values of `anyElement.style.cssText`,
-- setting transform values of `anyElement.style.transition`/`transitionProperty`.
+- setting transform values of `anyElement.style.transition`/`transitionProperty` in Chrome 26+.

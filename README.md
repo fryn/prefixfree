@@ -1,12 +1,18 @@
-# [-prefix-**free**](http://leaverou.github.com/prefixfree/)
+# [-prefix-free](http://fryn.github.io/prefixfree/)
 ## Break free from CSS prefix hell!
 
-[Project homepage](http://leaverou.github.com/prefixfree/)
-
-A script that lets you use only unprefixed CSS properties everywhere. 
+-prefix-free lets you use only unprefixed CSS properties everywhere. 
 It works behind the scenes, adding the current browser’s prefix to any CSS code, only when it’s needed.
 
-This fork creates no global variables and adds support for automatically prefixing properties and values when assigning to `element.style`.
+To use -prefix-free, simply include prefixfree.min.js at the bottom of the `<body>` of your page. For example:
+`<script src="prefixfree.min.js"></script>`
 
-## API Documentation
-Note: To use -prefix-free you don't need to write any JS code, just to include prefixfree.js or prefixfree.min.js in your page.
+This fork exposes no global variables to keep things clean and simple, and it improves upon the already excellent original by providing automatic prefixing support for the following:
+- external stylesheets (`<link>`),
+- internal stylesheets (`<style>`),
+- directly setting values of `style` attributes,
+- getting/setting values of `anyElement.style.anyProperty`.
+
+Known limitations in which -prefix-free cannot prefix CSS:
+- setting values of `anyElement.style.cssText`,
+- setting transform values of `anyElement.style.transition`/`transitionProperty`.

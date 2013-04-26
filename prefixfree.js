@@ -212,6 +212,7 @@ if (typeof addEventListener == 'function') ({
       'removeProperty',
       'setProperty'
     ].forEach(function(fn) {
+      observer && observer.disconnect();
       var orig = CSSStyleDeclaration.prototype[fn];
       var hook = function(name, value, priority) {
         value = that.keywords.indexOf(value) > -1 ? that.prefix + value :
@@ -219,7 +220,9 @@ if (typeof addEventListener == 'function') ({
             that._fix('properties', '(^|,|\\s)', '(\\s|,|$)',
                       '$1' + that.prefix + '$2$3', value) : value;
         name = that.properties.indexOf(name) > -1 ? that.prefix + name : name;
-        return orig.call(this, name, value, priority);
+        var out = orig.call(this, name, value, priority);
+        observer && observer.observe(target, config);
+        return out;
       };
       hook.toString = hook.toString.bind(orig);
       CSSStyleDeclaration.prototype[fn] = hook;

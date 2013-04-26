@@ -1,20 +1,24 @@
 /**
- * -prefix-free 1.0.7 (fryn remix) <https://github.com/fryn/prefixfree>
- * @author Lea Verou
+ * refix <https://github.com/fryn/refix>
+ * remix of -prefix-free by Lea Verou <https://github.com/leaverou/prefixfree>
  * @author Frank Yan
  * @license MIT license
  */
 
 if (typeof addEventListener == 'function') ({
-  initialize: function(exports) {
+  initialize: function() {
     var doc = document.implementation.createHTMLDocument('');
     var el = doc.documentElement.appendChild(doc.createElement('style'));
     var style = el.style;
 
     // Properties
 
-    function decapitalize(str) {
+    function uncapitalize(str) {
       return str.replace(/^[A-Z]/, function($0) { return $0.toLowerCase(); });
+    }
+
+    function unhyphenate(str) {
+      return str.replace(/-[a-z]/g, function($0) { return $0[1].toUpperCase(); });
     }
 
     var prefixes = {
@@ -24,10 +28,20 @@ if (typeof addEventListener == 'function') ({
     };
 
     this.properties = [];
-    for (var property in style) {
+    var properties = style;
+    if (!properties.propertyIsEnumerable('top')) { // Safari < 6, Android
+      properties = { };
+      Array.prototype.forEach.call(getComputedStyle(document.documentElement), function(name) {
+        properties[name = uncapitalize(unhyphenate(name))] = 0;
+        var shorthand = name.replace(/[A-Z][a-z]*$/, '');
+        if (shorthand in style)
+          properties[shorthand] = 0;
+      });
+    }
+    for (var property in properties) {
       for (var pref in prefixes) {
         if (!property.indexOf(pref)) {
-          var unprefixed = decapitalize(property.slice(pref.length));
+          var unprefixed = uncapitalize(property.slice(pref.length));
           if (!(unprefixed in style))
             this.properties.push(unprefixed);
           ++prefixes[pref];
@@ -41,10 +55,7 @@ if (typeof addEventListener == 'function') ({
     var prefix = Object.keys(prefixes).sort(function(a, b) {
       return prefixes[a] - prefixes[b];
     }).pop();
-    exports['PrefixFree'] = {
-      'JS': prefix,
-      'CSS': this.prefix = prefix ? '-' + prefix.toLowerCase() + '-' : ''
-    };
+    this.prefix = prefix ? '-' + prefix.toLowerCase() + '-' : '';
 
     // Properties that accept properties as their value
     this.valueProperties = [
@@ -96,8 +107,6 @@ if (typeof addEventListener == 'function') ({
         this.functions.push(fn);
     }
 
-    // Note: The properties assigned are just to *test* support. 
-    // The keywords will be prefixed everywhere.
     var keywords = {
       'initial': 'color',
       'zoom-in': 'cursor',
@@ -161,7 +170,7 @@ if (typeof addEventListener == 'function') ({
       }
     }
 
-    // Profit!
+    // Step 4: Profit!
 
     this.process();
 
@@ -169,43 +178,33 @@ if (typeof addEventListener == 'function') ({
       return str.replace(/^[a-z]/, function($0) { return $0.toUpperCase(); });
     }
 
-    var that = this;
-
-    if (typeof MutationObserver == 'function' ||
-        typeof WebkitMutationObserver == 'function') {
-      var target = document.documentElement;
-      var config = {
-        attributeFilter: ['style'],
-        attributes: true,
-        subtree: true
-      };
-      var observer = new (MutationObserver || WebkitMutationObserver)(function(mutations) {
-        observer.disconnect();
-        mutations.forEach(function(mutation) {
-          that.styleAttribute(mutation.target);
-        });
-        observer.observe(target, config);
-      });
-      observer.observe(target, config);
+    function hyphenate(str) {
+      return str.replace(/[A-Z]/g, function($0) { return '-' + $0.toLowerCase(); });
     }
 
-    this.properties.forEach(function(name) {
-      Object.defineProperty(CSSStyleDeclaration.prototype, name, {
-        get: function() {
-          return this[prefix + capitalize(name)];
-        },
-        set: function(value) {
-          observer && observer.disconnect();
+    var that = this;
 
-          this[prefix + capitalize(name)] =
-            that.keywords.indexOf(value) > -1 ? that.prefix + value :
-              that.valueProperties.indexOf(name) > -1 ?
-                that._fix('properties', '(^|,|\\s)', '(\\s|,|$)',
-                          '$1' + that.prefix + '$2$3', value) : value;
-
-          observer && observer.observe(target, config);
-        }
-      });
+    this.properties = this.properties.map(function(property) {
+      var prefixed = prefix + capitalize(property);
+      var hyphenated = hyphenate(property);
+      var names = { };
+      names[property] = 0;
+      names[hyphenated] = 0;
+      for (var name in names) {
+        Object.defineProperty(CSSStyleDeclaration.prototype, name, {
+          get: function() {
+            return this[prefixed];
+          },
+          set: function(value) {
+            this[prefixed] =
+              that.keywords.indexOf(value) > -1 ? that.prefix + value :
+                that.valueProperties.indexOf(hyphenated) > -1 ?
+                  that._fix('properties', '(^|,|\\s)', '(\\s|,|$)',
+                            '$1' + that.prefix + '$2$3', value) : value;
+          }
+        });
+      }
+      return name;
     });
 
     [
@@ -216,17 +215,13 @@ if (typeof addEventListener == 'function') ({
     ].forEach(function(fn) {
       var orig = CSSStyleDeclaration.prototype[fn];
       var hook = function(name, value, priority) {
-        observer && observer.disconnect();
-
         value = that.keywords.indexOf(value) > -1 ? that.prefix + value :
           that.valueProperties.indexOf(name) > -1 ?
             that._fix('properties', '(^|,|\\s)', '(\\s|,|$)',
                       '$1' + that.prefix + '$2$3', value) : value;
         name = that.properties.indexOf(name) > -1 ? that.prefix + name : name;
 
-        var out = orig.call(this, name, value, priority);
-        observer && observer.observe(target, config);
-        return out;
+        return orig.call(this, name, value, priority);
       };
       hook.toString = hook.toString.bind(orig);
       CSSStyleDeclaration.prototype[fn] = hook;
@@ -278,7 +273,7 @@ if (typeof addEventListener == 'function') ({
         parent.insertBefore(style, link);
         parent.removeChild(link);
 
-        style.media = link.media; // Duplicate is intentional. See issue #31
+        style.media = link.media; // Duplicate is intentional.
       }
     };
     xhr.onload = process;
@@ -315,13 +310,8 @@ if (typeof addEventListener == 'function') ({
   },
 
   process: function() {
-    // Linked stylesheets
     this._forEach('link[rel=stylesheet]', this.link);
-
-    // Inline stylesheets
     this._forEach('style', this.styleElement);
-
-    // Inline styles
     this._forEach('[style]', this.styleAttribute);
   },
 
@@ -332,9 +322,7 @@ if (typeof addEventListener == 'function') ({
   fix: function(css, raw) {
     var prefix = this.prefix;
 
-    // Gradient angles hotfix
     if (this.functions.indexOf('linear-gradient') > -1) {
-      // Gradients are supported with a prefix, convert angles to legacy
       css = css.replace(/(\s|:|,)(repeating-)?linear-gradient\(\s*(-?\d*\.?\d*)deg/ig,
                         function ($0, delim, repeating, deg) {
         return delim + (repeating || '') + 'linear-gradient(' + (90-deg) + 'deg';
@@ -345,7 +333,6 @@ if (typeof addEventListener == 'function') ({
     css = this._fix('keywords', '(\\s|:)', '(\\s|;|\\}|$)', '$1' + prefix + '$2$3', css);
     css = this._fix('properties', '(^|\\{|\\s|;)', '\\s*:', '$1' + prefix + '$2:', css);
 
-    // Prefix properties *inside* values (issue #8)
     var regex = RegExp('\\b(' + this.properties.join('|') + ')(?!:)', 'gi');
     css = this._fix('valueProperties', '\\b', ':(.+?);', function($0) {
       return $0.replace(regex, prefix + '$1');
@@ -356,7 +343,6 @@ if (typeof addEventListener == 'function') ({
       css = this._fix('atrules', '@', '\\b', '@' + prefix + '$1', css);
     }
 
-    // Fix double prefixing
     css = css.replace(RegExp('-' + prefix, 'g'), '-');
 
     return css;
@@ -375,4 +361,4 @@ if (typeof addEventListener == 'function') ({
     var prefix = this.prefix;
     return selector.replace(/^:{1,2}/, function($0) { return $0 + prefix; });
   }
-}).initialize({} /* replace with `this` to expose detected prefix as global */);
+}).initialize();

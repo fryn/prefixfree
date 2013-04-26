@@ -189,12 +189,10 @@ if (typeof addEventListener == 'function') ({
       observer.observe(target, config);
     }
 
-    var refix = RegExp(that.prefix, 'gi');
-
     this.properties.forEach(function(name) {
       Object.defineProperty(CSSStyleDeclaration.prototype, name, {
         get: function() {
-          return this[prefix + capitalize(name)].replace(refix, '');
+          return this[prefix + capitalize(name)];
         },
         set: function(value) {
           observer && observer.disconnect();
@@ -221,8 +219,7 @@ if (typeof addEventListener == 'function') ({
             that._fix('properties', '(^|,|\\s)', '(\\s|,|$)',
                       '$1' + that.prefix + '$2$3', value) : value;
         name = that.properties.indexOf(name) > -1 ? that.prefix + name : name;
-        var out = orig.call(this, name, value, priority);
-        return typeof out == 'string' ? out.replace(refix, '') : out;
+        return orig.call(this, name, value, priority);
       };
       hook.toString = hook.toString.bind(orig);
       CSSStyleDeclaration.prototype[fn] = hook;

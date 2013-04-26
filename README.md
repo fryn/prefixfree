@@ -8,11 +8,9 @@ To use -prefix-free, simply include prefixfree.min.js at the bottom of the `<bod
 `<script src="prefixfree.min.js"></script>`
 
 This fork exposes no global variables to keep things clean and simple, and it improves upon the already excellent original by providing automatic prefixing support for the following:
-- external stylesheets (`<link>`),
-- internal stylesheets (`<style>`),
-- directly setting values of `style` attributes,
-- getting/setting values of `anyElement.style.anyProperty`.
+- external `<link>` stylesheets,
+- internal `<style>` stylesheets,
+- directly setting `style` attribute values,
+- getting/setting `element.style.property`/`getPropertyValue()`/`setProperty()`.
 
-Known limitations in which -prefix-free cannot prefix CSS:
-- setting values of `anyElement.style.cssText`,
-- setting transform values of `anyElement.style.transition`/`transitionProperty` in Chrome 26+.
+Known limitation: -prefix-free cannot automatically prefix CSS when assigning to `element.style.cssText`.

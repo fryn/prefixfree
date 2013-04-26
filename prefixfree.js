@@ -196,11 +196,13 @@ if (typeof addEventListener == 'function') ({
         },
         set: function(value) {
           observer && observer.disconnect();
+
           this[prefix + capitalize(name)] =
             that.keywords.indexOf(value) > -1 ? that.prefix + value :
               that.valueProperties.indexOf(name) > -1 ?
                 that._fix('properties', '(^|,|\\s)', '(\\s|,|$)',
                           '$1' + that.prefix + '$2$3', value) : value;
+
           observer && observer.observe(target, config);
         }
       });
@@ -212,14 +214,16 @@ if (typeof addEventListener == 'function') ({
       'removeProperty',
       'setProperty'
     ].forEach(function(fn) {
-      observer && observer.disconnect();
       var orig = CSSStyleDeclaration.prototype[fn];
       var hook = function(name, value, priority) {
+        observer && observer.disconnect();
+
         value = that.keywords.indexOf(value) > -1 ? that.prefix + value :
           that.valueProperties.indexOf(name) > -1 ?
             that._fix('properties', '(^|,|\\s)', '(\\s|,|$)',
                       '$1' + that.prefix + '$2$3', value) : value;
         name = that.properties.indexOf(name) > -1 ? that.prefix + name : name;
+
         var out = orig.call(this, name, value, priority);
         observer && observer.observe(target, config);
         return out;

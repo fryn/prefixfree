@@ -1,5 +1,5 @@
 /**
- * refix <https://github.com/fryn/refix>
+ * -prefix-free <https://github.com/fryn/prefixfree>
  * remix of -prefix-free by Lea Verou <https://github.com/leaverou/prefixfree>
  * @author Frank Yan
  * @license MIT license
